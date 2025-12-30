@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Comprehensive documentation overhaul
+  - `CLAUDE.md` - AI guidance for Claude
+  - `GEMINI.md` - AI guidance for Gemini
+  - `CONTRIBUTING.md` - Contribution guidelines
+  - `docs/ROADMAP.md` - Complete development roadmap to post-MVP
+- Enhanced `AGENTS.md` with model-specific links and improved architecture docs
+- Removed duplicate `WARP.md` file
+
+### Fixed
+- NixOS `flake.nix` version mismatch (0.0.6 -> 0.0.7)
+
 ## [0.0.7] - 2025-10-28
 
 ### Added

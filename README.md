@@ -1,4 +1,8 @@
-# Christian's `Boilerplates`
+# Boilerplates CLI
+
+[![GitHub Release](https://img.shields.io/github/v/release/christianlempa/boilerplates?style=flat-square)](https://github.com/christianlempa/boilerplates/releases)
+[![Python Version](https://img.shields.io/badge/python-3.9%2B-blue?style=flat-square)](https://www.python.org/)
+[![License](https://img.shields.io/badge/license-MIT-green?style=flat-square)](LICENSE)
 
 [![Welcome](https://cnd-prod-1.s3.us-west-004.backblazeb2.com/new-banner4-scaled-for-github.jpg)](https://youtu.be/apgp9egIKK8)
 
@@ -14,34 +18,38 @@
 
 The Boilerplates CLI tool gives you instant access to battle-tested templates for Docker, Terraform, Ansible, Kubernetes, and more.
 
-Each template includes sensible defaults, best practices, and common configuration patterns—so you can focus on customizing for your environment.
+Each template includes sensible defaults, best practices, and common configuration patterns - so you can focus on customizing for your environment.
 
-**Key Features:**
-- 🚀 **Quick Setup** - Generate complete project structures in seconds
-- 🔧 **Fully Customizable** - Interactive prompts or non-interactive mode with variable overrides
-- 💾 **Smart Defaults** - Save your preferred values and reuse across projects
+### Key Features
+
+| Feature | Description |
+|---------|-------------|
+| **Quick Setup** | Generate complete project structures in seconds |
+| **Customizable** | Interactive prompts or non-interactive mode with variable overrides |
+| **Smart Defaults** | Save your preferred values and reuse across projects |
+| **Multi-Library** | Use multiple template sources (git repos + local directories) |
+| **Schema Versioning** | Backward-compatible template evolution |
+| **Validation** | Built-in Jinja2 and semantic validation |
 
 > **Note:** Technologies evolve rapidly. While I actively maintain these templates, always review generated configurations before deploying to production.
 
-### Installation
+---
 
-#### Automated installer script
+## Installation
 
-Install the Boilerplates CLI using the automated installer:
+### Automated Installer (Recommended)
 
 ```bash
 # Install latest version
 curl -fsSL https://raw.githubusercontent.com/christianlempa/boilerplates/main/scripts/install.sh | bash
 
 # Install specific version
-curl -fsSL https://raw.githubusercontent.com/christianlempa/boilerplates/main/scripts/install.sh | bash -s -- --version v1.2.3
+curl -fsSL https://raw.githubusercontent.com/christianlempa/boilerplates/main/scripts/install.sh | bash -s -- --version v0.0.7
 ```
 
-The installer uses `pipx` to create an isolated environment for the CLI tool. Once installed, the `boilerplates` command will be available in your terminal.
+The installer uses `pipx` to create an isolated environment. Once installed, the `boilerplates` command will be available in your terminal.
 
-#### Nixos
-
-If you are using nix flakes
+### NixOS / Nix Flakes
 
 ```bash
 # Run without installing
@@ -50,32 +58,42 @@ nix run github:christianlempa/boilerplates -- --help
 # Install to your profile
 nix profile install github:christianlempa/boilerplates
 
-# Or directly in your flake
+# Use in a temporary shell
+nix shell github:christianlempa/boilerplates
+
+# Add to your flake
 {
   inputs.boilerplates.url = "github:christianlempa/boilerplates";
-
   outputs = { self, nixpkgs, boilerplates }: {
     # Use boilerplates.packages.${system}.default
   };
 }
-
-# Use in a temporary shell
-nix shell github:christianlempa/boilerplates
 ```
 
-### Quick Start
+### Manual Installation
 
 ```bash
-# Explore
+# Clone and install with pip
+git clone https://github.com/christianlempa/boilerplates.git
+cd boilerplates
+pip install -e .
+```
+
+---
+
+## Quick Start
+
+```bash
+# Explore available commands
 boilerplates --help
 
-# Update Repository Library
+# Update template library
 boilerplates repo update
 
-# List all available templates for a docker compose
+# List all Docker Compose templates
 boilerplates compose list
 
-# Show details about a specific template
+# Show template details
 boilerplates compose show nginx
 
 # Generate a template (interactive mode)
@@ -90,20 +108,60 @@ boilerplates compose generate traefik my-proxy \
   --var traefik_enabled=true \
   --var traefik_host=proxy.example.com \
   --no-interactive
+
+# Dry-run (preview without writing files)
+boilerplates compose generate nginx --dry-run
+
+# Validate templates
+boilerplates compose validate
 ```
 
-### Managing Defaults
+---
 
-Save time by setting default values for variables you use frequently:
+## Available Templates
+
+### Docker Compose (33 templates)
+
+| Category | Templates |
+|----------|-----------|
+| **Monitoring** | Prometheus, Grafana, Loki, Alloy, Wazuh, Checkmk, Uptime Kuma |
+| **Dashboards** | Heimdall, Homer, Homepage, Portainer, Dockge, Nginx Proxy Manager |
+| **DevOps** | Gitea, GitLab, GitLab Runner, SemaphoreUI |
+| **Databases** | PostgreSQL, MariaDB, InfluxDB |
+| **Auth** | Authentik, Passbolt |
+| **Infrastructure** | Nginx, Traefik, Bind9, Pi-hole, Twingate |
+| **Content** | Nextcloud, n8n, Home Assistant, Open WebUI |
+| **Utilities** | Whoami, ClamAV |
+
+### Coming Soon
+
+- Terraform/OpenTofu templates
+- Docker (Dockerfile) templates
+- Ansible playbooks
+- Kubernetes manifests
+- Packer templates
+
+---
+
+## Managing Defaults
+
+Save time by setting default values for frequently used variables:
 
 ```bash
-# Set a default value
+# Set default values
 boilerplates compose defaults set container_timezone "America/New_York"
 boilerplates compose defaults set restart_policy "unless-stopped"
 
+# List current defaults
+boilerplates compose defaults list
+
+# Remove a default
+boilerplates compose defaults rm container_timezone
 ```
 
-### Template Libraries
+---
+
+## Template Libraries
 
 Boilerplates uses git-based libraries to manage templates. You can add custom repositories:
 
@@ -123,25 +181,92 @@ boilerplates repo add my-templates https://github.com/user/templates \
 boilerplates repo remove my-templates
 ```
 
+### Library Priority
+
+When multiple libraries contain the same template ID:
+- Libraries are checked in config order (first = highest priority)
+- Use qualified IDs for specific libraries: `nginx.my-templates`
+
+---
+
+## Configuration
+
+Configuration is stored in `~/.config/boilerplates/config.yaml`:
+
+```yaml
+libraries:
+  - name: default
+    type: git
+    url: https://github.com/christianlempa/boilerplates.git
+    branch: main
+    directory: library
+  - name: local
+    type: static
+    path: ~/my-templates
+
+defaults:
+  compose:
+    container_timezone: "America/New_York"
+    restart_policy: "unless-stopped"
+```
+
+---
+
 ## Documentation
 
-For comprehensive documentation, advanced usage, and template development guides, check out the **[Wiki](../../wiki)** _(coming soon)_.
+| Document | Description |
+|----------|-------------|
+| [ROADMAP](docs/ROADMAP.md) | Development roadmap to post-MVP |
+| [CONTRIBUTING](CONTRIBUTING.md) | Contribution guidelines |
+| [AGENTS](AGENTS.md) | AI/coding assistant guidance |
+| [CHANGELOG](CHANGELOG.md) | Version history |
+| [SECURITY](SECURITY.md) | Security policy |
 
-If you're looking for detailed tutorials on specific tools and technologies, visit my [YouTube Channel](https://www.youtube.com/@christianlempa).
+### For AI Assistants
 
-## Contribution
+- [CLAUDE.md](CLAUDE.md) - Claude AI guidance
+- [GEMINI.md](GEMINI.md) - Gemini AI guidance
+- [AGENTS.md](AGENTS.md) - General AI agent guidance
 
-If you’d like to contribute to this project, reach out to me on social media or [Discord](https://christianlempa.de/discord), or create a pull request for the necessary changes.
+---
+
+## Contributing
+
+Contributions are welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+
+### Quick Contribution Guide
+
+1. Fork the repository
+2. Create a feature branch: `feature/your-feature`
+3. Make changes and run linters: `ruff check cli/ && yamllint .`
+4. Submit a pull request
+
+---
 
 ## Other Resources
 
 - [Dotfiles](https://github.com/christianlempa/dotfiles) - My personal configuration files on macOS
 - [Cheat-Sheets](https://github.com/christianlempa/cheat-sheets) - Command Reference for various tools and technologies
+- [YouTube Channel](https://www.youtube.com/@christianlempa) - Tutorials and educational content
 
-## Support me
+---
 
-Creating high-quality videos and valuable resources that are accessible to everyone, free of charge, is a huge challenge. With your contribution, I can dedicate more time and effort into the creation process, which ultimately enhances the quality of the content. So, all your support, by becoming a member, truly makes a significant impact on what I do. And you’ll also get some cool benefits and perks in return, as a recognition of your support.
+## Support
 
-Remember, ***supporting me is entirely optional.*** Your choice to become a member or not won't change your access to my videos and resources. You are also welcome to reach out to me on Discord, if you have any questions or feedback.
+Creating high-quality videos and valuable resources that are accessible to everyone, free of charge, is a huge challenge. With your contribution, I can dedicate more time and effort into the creation process, which ultimately enhances the quality of the content.
+
+All your support truly makes a significant impact. And you'll also get some cool benefits and perks in return!
+
+Remember, **supporting me is entirely optional.** Your choice to become a member won't change your access to my videos and resources.
 
 [https://www.patreon.com/christianlempa](https://www.patreon.com/christianlempa)
+
+---
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+---
+
+*Made with love by [Christian Lempa](https://github.com/christianlempa)*

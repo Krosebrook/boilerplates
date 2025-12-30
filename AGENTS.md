@@ -1,354 +1,450 @@
 # AGENTS.md
 
-Guidance for AI Agents working with this repository.
+> Comprehensive guidance for AI agents and coding assistants working with this repository.
+
+## Model-Specific Guidance
+
+For AI-specific optimizations, see:
+- **Claude:** [CLAUDE.md](./CLAUDE.md)
+- **Gemini:** [GEMINI.md](./GEMINI.md)
+
+---
 
 ## Project Overview
 
-A sophisticated collection of infrastructure templates (boilerplates) with a Python CLI for management. Supports Terraform, Docker, Ansible, Kubernetes, etc. Built with Typer (CLI) and Jinja2 (templating).
+**Boilerplates CLI** is a sophisticated Python command-line tool for managing infrastructure templates. It provides instant access to production-ready templates for Docker Compose, Terraform, Ansible, Kubernetes, Packer, and more.
 
-## Development Setup
+| Attribute | Value |
+|-----------|-------|
+| Version | 0.0.7 |
+| Python | 3.9+ |
+| Framework | Typer + Rich + Jinja2 |
+| License | MIT |
+| Author | Christian Lempa |
 
-### Running and Testing
+---
+
+## Quick Start for Agents
 
 ```bash
-# Run the CLI application
+# Run the CLI
 python3 -m cli
-# Debugging and Testing commands
+
+# Debug mode
 python3 -m cli --log-level DEBUG compose list
+
+# List templates
+python3 -m cli compose list
+
+# Generate template
+python3 -m cli compose generate nginx my-nginx
+
+# Validate templates
+python3 -m cli compose validate
 ```
 
-### Linting and Formatting
+### Linting (ALWAYS run before commits)
 
-Should **always** happen before pushing anything to the repository.
+```bash
+ruff check cli/     # Python
+ruff format cli/    # Python formatting
+yamllint .          # YAML
+```
 
-- Use `yamllint` for YAML files and `ruff` for Python code.
-
-### Project Management and Git
-
-The project is stored in a public GitHub Repository, use issues, and branches for features/bugfixes and open PRs for merging.
-
-**Naming Conventions and Best-Practices:**
-- Branches, PRs: `feature/2314-add-feature`, `problem/1249-fix-bug`
-- Issues should have clear titles and descriptions, link related issues/PRs, and have appropriate labels like (problem, feature, discussion, question).
-- Commit messages should be clear and concise, following the format: `type(scope): subject` (e.g., `fix(compose): correct variable parsing`).
+---
 
 ## Architecture
 
-### File Structure
+### Directory Structure
 
-- `cli/` - Python CLI application source code
-  - `cli/core/` - Core Components of the CLI application
-  - `cli/modules/` - Modules implementing variable specs and technology-specific functions
-  - `cli/__main__.py` - CLI entry point, auto-discovers modules and registers commands
-- `library/` - Template collections organized by module
-  - `library/ansible/` - Ansible playbooks and configurations
-  - `library/compose/` - Docker Compose configurations
-  - `library/docker/` - Docker templates
-  - `library/kubernetes/` - Kubernetes deployments
-  - `library/packer/` - Packer templates
-  - `library/terraform/` - OpenTofu/Terraform templates and examples
+```
+boilerplates/
+├── cli/                          # Python CLI application
+│   ├── __init__.py               # Version: "0.0.7"
+│   ├── __main__.py               # Entry point, module discovery
+│   ├── core/                     # Core framework
+│   │   ├── collection.py         # VariableCollection dataclass
+│   │   ├── config.py             # ConfigManager
+│   │   ├── display.py            # DisplayManager (ALL output)
+│   │   ├── exceptions.py         # Custom exceptions (ALWAYS use)
+│   │   ├── library.py            # LibraryManager
+│   │   ├── module.py             # Abstract Module base
+│   │   ├── prompt.py             # PromptHandler (Rich)
+│   │   ├── registry.py           # Module auto-discovery
+│   │   ├── repo.py               # Git repository sync
+│   │   ├── section.py            # VariableSection dataclass
+│   │   ├── template.py           # Template parsing/rendering
+│   │   ├── validators.py         # Semantic validators
+│   │   ├── variable.py           # Variable dataclass
+│   │   └── version.py            # Semver utilities
+│   └── modules/                  # Technology modules
+│       └── compose/              # Docker Compose (implemented)
+│           ├── __init__.py       # ComposeModule
+│           ├── spec_v1_0.py      # Schema 1.0
+│           └── spec_v1_1.py      # Schema 1.1
+├── library/                      # Template collections
+│   └── compose/                  # 33 Docker Compose templates
+├── tests/                        # Test scripts
+├── scripts/                      # Installation scripts
+└── docs/                         # Documentation
+    └── ROADMAP.md                # Development roadmap
+```
 
 ### Core Components
 
-- `cli/core/collection.py` - Dataclass for VariableCollection (stores variable sections and variables)
-- `cli/core/config.py` - Configuration management (loading, saving, validation)
-- `cli/core/display.py` - Centralized CLI output rendering (**Always use this to display output - never print directly**)
-- `cli/core/exceptions.py` - Custom exceptions for error handling (**Always use this for raising errors**)
-- `cli/core/library.py` - LibraryManager for template discovery from git-synced libraries and static file paths
-- `cli/core/module.py` - Abstract base class for modules (defines standard commands)
-- `cli/core/prompt.py` - Interactive CLI prompts using rich library
-- `cli/core/registry.py` - Central registry for module classes (auto-discovers modules)
-- `cli/core/repo.py` - Repository management for syncing git-based template libraries
-- `cli/core/section.py` - Dataclass for VariableSection (stores section metadata and variables)
-- `cli/core/template.py` - Template Class for parsing, managing and rendering templates
-- `cli/core/variable.py` - Dataclass for Variable (stores variable metadata and values)
-- `cli/core/validators.py` - Semantic validators for template content (Docker Compose, YAML, etc.)
-- `cli/core/version.py` - Version comparison utilities for semantic versioning
+| Component | File | Purpose |
+|-----------|------|---------|
+| DisplayManager | `cli/core/display.py` | **ALL** CLI output (never print directly) |
+| Exceptions | `cli/core/exceptions.py` | **ALL** errors (never use generic Exception) |
+| Module | `cli/core/module.py` | Abstract base for technology modules |
+| Template | `cli/core/template.py` | Template loading and rendering |
+| VariableCollection | `cli/core/collection.py` | Variable sections and values |
+| ConfigManager | `cli/core/config.py` | User configuration |
+| LibraryManager | `cli/core/library.py` | Multi-library template discovery |
+| PromptHandler | `cli/core/prompt.py` | Interactive prompts (Rich) |
+| Registry | `cli/core/registry.py` | Module auto-discovery |
 
-### Modules
+---
 
-**Module Structure:**
-Modules can be either single files or packages:
-- **Single file**: `cli/modules/modulename.py` (for simple modules)
-- **Package**: `cli/modules/modulename/` with `__init__.py` (for multi-schema modules)
+## Critical Patterns
 
-**Creating Modules:**
-- Subclass `Module` from `cli/core/module.py`
-- Define `name`, `description`, and `schema_version` class attributes
-- For multi-schema modules: organize specs in separate files (e.g., `spec_v1_0.py`, `spec_v1_1.py`)
-- Call `registry.register(YourModule)` at module bottom
-- Auto-discovered and registered at CLI startup
+### 1. Display Output (MANDATORY)
 
-**Module Spec:**
-Optional class attribute for module-wide variable defaults. Example:
+**ALWAYS** use DisplayManager for ALL output:
+
 ```python
-spec = VariableCollection.from_dict({
-  "general": {"vars": {"common_var": {"type": "str", "default": "value"}}},
-  "networking": {"title": "Network", "toggle": "net_enabled", "vars": {...}}
-})
+from cli.core.display import display
+
+# Correct
+display.display_info("Processing...")
+display.display_success("Done!")
+display.display_error("Failed!")
+display.display_warning("Caution!")
+
+# WRONG - Never do this
+print("message")           # NO
+console.print("message")   # NO
 ```
 
-**Multi-Schema Modules:**
-For modules supporting multiple schema versions, use package structure:
+### 2. Exception Handling (MANDATORY)
+
+**ALWAYS** use custom exceptions:
+
+```python
+from cli.core.exceptions import (
+    TemplateNotFoundError,
+    VariableValidationError,
+    ConfigError,
+    TemplateRenderError,
+)
+
+# Correct
+raise TemplateNotFoundError(template_id="nginx", module_name="compose")
+raise VariableValidationError(variable_name="port", message="Must be 1-65535")
+
+# WRONG - Never do this
+raise Exception("Not found")     # NO
+raise ValueError("Invalid")      # NO (unless type coercion)
 ```
-cli/modules/compose/
-  __init__.py          # Module class, loads appropriate spec
-  spec_v1_0.py         # Schema 1.0 specification
-  spec_v1_1.py         # Schema 1.1 specification
+
+### 3. Module Pattern
+
+```python
+from cli.core.module import Module
+from cli.core.registry import registry
+from cli.core.collection import VariableCollection
+
+class MyModule(Module):
+    name = "mymodule"
+    description = "Module description for CLI help"
+    schema_version = "1.0"
+
+    spec = VariableCollection.from_dict({
+        "general": {
+            "title": "General Settings",
+            "required": True,
+            "vars": {
+                "my_var": {
+                    "type": "str",
+                    "default": "value",
+                    "description": "Help text"
+                }
+            }
+        }
+    })
+
+# Register at bottom of module file
+registry.register(MyModule)
 ```
 
-**Existing Modules:**
-- `cli/modules/compose/` - Docker Compose package with schema 1.0 and 1.1 support
-  - `spec_v1_0.py` - Basic compose spec
-  - `spec_v1_1.py` - Extended with network_mode, swarm support
+---
 
-**(Work in Progress):** terraform, docker, ansible, kubernetes, packer modules
+## Templates
 
-### LibraryManager
+### Template Structure
 
-- Loads libraries from config file
-- Stores Git Libraries under: `~/.config/boilerplates/libraries/{name}/`
-- Uses sparse-checkout to clone only template directories for git-based libraries (avoiding unnecessary files)
-- Supports two library types: **git** (synced from repos) and **static** (local directories)
-- Priority determined by config order (first = highest)
+```
+library/compose/mytemplate/
+├── template.yaml         # Metadata + variable specs (required)
+├── compose.yaml.j2       # Main Jinja2 template (required)
+├── config/               # Optional config files
+│   └── settings.conf.j2
+└── data/                 # Optional static files
+```
 
-**Library Types:**
-- `git`: Requires `url`, `branch`, `directory` fields
-- `static`: Requires `path` field (absolute or relative to config)
+### template.yaml Schema
 
-**Duplicate Handling:**
-- Within same library: Raises `DuplicateTemplateError`
-- Across libraries: Uses qualified IDs (e.g., `alloy.default`, `alloy.local`)
-- Simple IDs use priority: `compose show alloy` loads from first library
-- Qualified IDs target specific library: `compose show alloy.local`
-
-**Config Example:**
 ```yaml
+---
+kind: compose                # Module type
+schema: "1.1"                # Schema version (default: 1.0)
+metadata:
+  name: Service Name
+  description: |
+    Description with links.
+
+    Project: https://...
+    Source: https://...
+    Documentation: https://...
+  version: 1.0.0
+  author: Author Name
+  date: '2025-01-01'
+  tags: [monitoring, database]
+  draft: false               # Set true for WIP templates
+  next_steps: |              # Optional post-generation instructions
+spec:
+  section_name:
+    title: Display Title
+    required: true/false
+    toggle: bool_var_name    # Conditional section
+    needs: [section1, sec2]  # Dependencies
+    vars:
+      variable_name:
+        type: str/int/float/bool/email/url/hostname/enum
+        default: value
+        description: Help text
+        prompt: Custom prompt text
+        sensitive: true/false
+        autogenerated: true/false
+        required: true/false
+        optional: true/false
+        options: [a, b, c]   # For enum type
+        extra: Additional help
+```
+
+### Variable Types
+
+| Type | Description | Validation |
+|------|-------------|------------|
+| `str` | String (default) | None |
+| `int` | Integer | Numeric |
+| `float` | Float | Numeric |
+| `bool` | Boolean | true/false |
+| `email` | Email address | Regex |
+| `url` | URL | Scheme required |
+| `hostname` | Domain/hostname | Domain format |
+| `enum` | Choice | Must be in `options` |
+
+### Variable Precedence (lowest to highest)
+
+1. Module `spec` defaults
+2. Template `spec` overrides
+3. User `config.yaml`
+4. CLI `--var` arguments
+
+### Schema Versioning
+
+- **Schema 1.0:** Basic functionality
+- **Schema 1.1:** `network_mode`, Docker Swarm support
+
+Templates declare: `schema: "1.1"`
+Modules support up to their `schema_version`
+
+---
+
+## Commands
+
+### Standard Module Commands (auto-registered)
+
+| Command | Description |
+|---------|-------------|
+| `list` | List all templates |
+| `search <query>` | Search templates by ID |
+| `show <id>` | Show template details |
+| `generate <id> [dir]` | Generate from template |
+| `validate [id]` | Validate templates |
+| `defaults` | Manage user defaults |
+
+### Generate Options
+
+```bash
+--dry-run           # Preview without writing
+--no-interactive    # Skip prompts, use defaults
+--var KEY=VALUE     # Override variable
+```
+
+### Core Commands
+
+```bash
+boilerplates repo list      # List configured libraries
+boilerplates repo update    # Sync git libraries
+boilerplates repo add       # Add new library
+boilerplates repo remove    # Remove library
+```
+
+---
+
+## LibraryManager
+
+### Library Types
+
+1. **git:** Synced from remote repository
+2. **static:** Local directory
+
+### Configuration
+
+```yaml
+# ~/.config/boilerplates/config.yaml
 libraries:
-  - name: default       # Highest priority (checked first)
+  - name: default
     type: git
     url: https://github.com/user/templates.git
     branch: main
     directory: library
-  - name: local         # Lower priority
+  - name: local
     type: static
     path: ~/my-templates
-    url: ''             # Backward compatibility fields
-    branch: main
-    directory: .
 ```
 
-**Note:** Static libraries include dummy `url`/`branch`/`directory` fields for backward compatibility with older CLI versions.
+### Template Resolution
 
-### ConfigManager
+- Priority: Config order (first = highest)
+- Simple ID: First library match wins
+- Qualified ID: `template.library` for specific library
 
-- User Config stored in `~/.config/boilerplates/config.yaml`
-
-### DisplayManager and IconManager
-
-External code should NEVER directly call `IconManager` or `console.print`, instead always use `DisplayManager` methods.
-
-- `DisplayManager` provides a **centralized interface** for ALL CLI output rendering (Use `display_***` methods from `DisplayManager` for ALL output)
-- `IconManager` provides **Nerd Font icons** internally for DisplayManager, don't use Emojis or direct console access
-
-## Templates
-
-Templates are directory-based. Each template is a directory containing all the necessary files and subdirectories for the boilerplate.
-
-Requires `template.yaml` or `template.yml` with metadata and variables:
-
-```yaml
 ---
-kind: compose
-schema: "1.0"  # Optional: Defaults to 1.0 if not specified
-metadata:
-  name: My Nginx Template
-  description: >
-    A template for a simple Nginx service.
-
-
-    Project: https://...
-
-    Source: https://
-
-    Documentation: https://
-  version: 0.1.0
-  author: Christian Lempa
-  date: '2024-10-01'
-spec:
-  general:
-    vars:
-      nginx_version:
-        type: string
-        description: The Nginx version to use.
-        default: latest
-```
-
-### Template Schema Versioning
-
-Templates and modules use schema versioning to ensure compatibility. Each module defines a supported schema version, and templates declare which schema version they use.
-
-```yaml
----
-kind: compose
-schema: "1.0"  # Defaults to 1.0 if not specified
-metadata:
-  name: My Template
-  version: 1.0.0
-  # ... other metadata fields
-spec:
-  # ... variable specifications
-```
-
-**How It Works:**
-- **Module Schema Version**: Each module defines `schema_version` (e.g., "1.1")
-- **Module Spec Loading**: Modules load appropriate spec based on template's schema version
-- **Template Schema Version**: Each template declares `schema` at the top level (defaults to "1.0")
-- **Compatibility Check**: Template schema ≤ Module schema → Compatible
-- **Incompatibility**: Template schema > Module schema → `IncompatibleSchemaVersionError`
-
-**Behavior:**
-- Templates without `schema` field default to "1.0" (backward compatible)
-- Old templates (schema 1.0) work with newer modules (schema 1.1)
-- New templates (schema 1.2) fail on older modules (schema 1.1) with clear error
-- Version comparison uses 2-level versioning (major.minor format)
-
-**When to Use:**
-- Increment module schema version when adding new features (new variable types, sections, etc.)
-- Set template schema when using features from a specific schema
-- Example: Template using new variable type added in schema 1.1 should set `schema: "1.1"`
-
-**Single-File Module Example:**
-```python
-class SimpleModule(Module):
-  name = "simple"
-  description = "Simple module"
-  schema_version = "1.0"
-  spec = VariableCollection.from_dict({...})  # Single spec
-```
-
-**Multi-Schema Module Example:**
-```python
-# cli/modules/compose/__init__.py
-class ComposeModule(Module):
-  name = "compose"
-  description = "Manage Docker Compose configurations"
-  schema_version = "1.1"  # Highest schema version supported
-  
-  def get_spec(self, template_schema: str) -> VariableCollection:
-    """Load spec based on template schema version."""
-    if template_schema == "1.0":
-      from .spec_v1_0 import get_spec
-    elif template_schema == "1.1":
-      from .spec_v1_1 import get_spec
-    return get_spec()
-```
-
-**Version Management:**
-- CLI version is defined in `cli/__init__.py` as `__version__`
-- pyproject.toml version must match `__version__` for releases
-- GitHub release workflow validates version consistency
-
-### Template Files
-
-- **Jinja2 Templates (`.j2`)**: Rendered by Jinja2, `.j2` extension removed in output. Support `{% include %}` and `{% import %}`.
-- **Static Files**: Non-`.j2` files copied as-is.
-- **Sanitization**: Auto-sanitized (single blank lines, no leading blanks, trimmed whitespace, single trailing newline).
-
-### Variables
-
-**Precedence** (lowest to highest):
-1. Module `spec` (defaults for all templates of that kind)
-2. Template `spec` (overrides module defaults)
-3. User `config.yaml` (overrides template and module defaults)
-4. CLI `--var` (highest priority)
-
-**Variable Types:**
-- `str` (default), `int`, `float`, `bool`
-- `email` - Email validation with regex
-- `url` - URL validation (requires scheme and host)
-- `hostname` - Hostname/domain validation
-- `enum` - Choice from `options` list
-
-**Variable Properties:**
-- `sensitive: true` - Masked in prompts/display (e.g., passwords)
-- `autogenerated: true` - Auto-generates value if empty (shows `*auto` placeholder)
-- `default` - Default value
-- `description` - Variable description
-- `prompt` - Custom prompt text (overrides description)
-- `extra` - Additional help text
-- `options` - List of valid values (for enum type)
-
-**Section Features:**
-- **Required Sections**: Mark with `required: true` (general is implicit). Users must provide all values.
-- **Toggle Settings**: Conditional sections via `toggle: "bool_var_name"`. If false, section is skipped.
-- **Dependencies**: Use `needs: "section_name"` or `needs: ["sec1", "sec2"]`. Dependent sections only shown when dependencies are enabled. Auto-validated (detects circular/missing/self dependencies). Topologically sorted.
-
-**Example Section with Dependencies:**
-
-```yaml
-spec:
-  traefik:
-    title: Traefik
-    required: false
-    toggle: traefik_enabled
-    vars:
-      traefik_enabled:
-        type: bool
-        default: false
-      traefik_host:
-        type: hostname
-  
-  traefik_tls:
-    title: Traefik TLS/SSL
-    needs: traefik
-    toggle: traefik_tls_enabled
-    vars:
-      traefik_tls_enabled:
-        type: bool
-        default: true
-      traefik_tls_certresolver:
-        type: str
-        sensitive: false
-        default: myresolver
-```
 
 ## Validation
 
-**Jinja2 Validation:**
-- Templates validated for Jinja2 syntax errors during load
-- Checks for undefined variables (variables used but not declared in spec)
+### Jinja2 Validation
+
+- Syntax error detection
+- Undefined variable detection
 - Built into Template class
 
-**Semantic Validation:**
-- Validator registry system in `cli/core/validators.py`
-- Extensible: `ContentValidator` abstract base class
-- Built-in validators: `DockerComposeValidator`, `YAMLValidator`
-- Validates rendered output (YAML structure, Docker Compose schema, etc.)
-- Triggered via `compose validate` command with `--semantic` flag (enabled by default)
+### Semantic Validation
 
-## Prompt
+- `DockerComposeValidator`: Docker Compose schema
+- `YAMLValidator`: YAML structure
+- Extensible via `ContentValidator` base class
 
-Uses `rich` library for interactive prompts. Supports:
-- Text input
-- Password input (masked, for `sensitive: true` variables)
-- Selection from list (single/multiple)
-- Confirmation (yes/no)
-- Default values
-- Autogenerated variables (show `*auto` placeholder, generate on render)
+---
 
-To skip the prompt use the `--no-interactive` flag, which will use defaults or empty values.
+## Development Guidelines
 
-## Commands
+### Git Workflow
 
-**Standard Module Commands** (auto-registered for all modules):
-- `list` - List all templates
-- `search <query>` - Search templates by ID
-- `show <id>` - Show template details
-- `generate <id> [directory]` - Generate from template (supports `--dry-run`, `--var`, `--no-interactive`)
-- `validate [id]` - Validate templates (Jinja2 + semantic)
-- `defaults` - Manage config defaults (`get`, `set`, `rm`, `clear`, `list`)
+```
+feature/ISSUE-brief-description
+problem/ISSUE-fix-description
+```
 
-**Core Commands:**
-- `repo sync` - Sync git-based libraries
-- `repo list` - List configured libraries
+### Commit Messages
+
+```
+type(scope): subject
+
+feat(compose): add new template
+fix(core): resolve variable parsing
+docs(readme): update installation
+refactor(template): simplify rendering
+test(compose): add validation tests
+chore(deps): update dependencies
+```
+
+### Code Style
+
+- **Python:** PEP 8, 4-space indent, type hints
+- **YAML:** 2-space indent, 160 char max
+- **Docstrings:** Google style
+
+### Version Sync
+
+Update version in 3 places:
+1. `cli/__init__.py`
+2. `pyproject.toml`
+3. `flake.nix`
+
+---
+
+## Current Status
+
+### Implemented
+
+- [x] Core CLI framework
+- [x] Docker Compose module (33 templates)
+- [x] Multi-library support
+- [x] Schema versioning (1.0, 1.1)
+- [x] Interactive/non-interactive modes
+- [x] Semantic validation
+- [x] Rich terminal UI
+
+### Work in Progress
+
+- [ ] Terraform module
+- [ ] Docker (Dockerfile) module
+- [ ] Ansible module
+- [ ] Kubernetes module
+- [ ] Packer module
+- [ ] Wiki documentation
+- [ ] PyPI publishing
+
+---
+
+## Testing
+
+```bash
+# Template validation
+./tests/test-compose-templates.sh
+
+# Single template
+python3 -m cli compose validate nginx
+
+# Dry-run
+python3 -m cli compose generate nginx --dry-run
+
+# Debug mode
+python3 -m cli --log-level DEBUG compose list
+```
+
+---
+
+## Quick Reference
+
+### Key Files
+
+| Purpose | Location |
+|---------|----------|
+| Version | `cli/__init__.py` |
+| Dependencies | `pyproject.toml` |
+| All output | `cli/core/display.py` |
+| All errors | `cli/core/exceptions.py` |
+| Module base | `cli/core/module.py` |
+| Templates | `library/compose/` |
+
+### Common Imports
+
+```python
+from cli.core.display import display
+from cli.core.exceptions import TemplateNotFoundError, VariableValidationError
+from cli.core.module import Module
+from cli.core.registry import registry
+from cli.core.collection import VariableCollection
+from cli.core.template import Template
+from cli.core.config import ConfigManager
+```
+
+---
+
+*For detailed development roadmap, see [docs/ROADMAP.md](./docs/ROADMAP.md)*
+*For contribution guidelines, see [CONTRIBUTING.md](./CONTRIBUTING.md)*
